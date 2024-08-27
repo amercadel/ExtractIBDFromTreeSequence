@@ -1,0 +1,7 @@
+attrs
+hypothesis
+humanize
+pytest
+pytest-cov
+numpy
+mock

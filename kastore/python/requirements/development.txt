@@ -1,0 +1,14 @@
+attrs
+codecov
+coverage
+flake8
+hypothesis
+humanize
+pytest
+pytest-cov
+numpy
+mock
+pre-commit
+breathe
+sphinx_rtd_theme
+sphinx-issues
