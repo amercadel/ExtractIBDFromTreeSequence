@@ -192,9 +192,11 @@ int main(int argc, char* argv[]){
     for (int i = 0; i < n_threads; i++){
         threads.emplace_back(extract_segments, std::ref(gen_map), std::ref(ts), chunks[i].first, chunks[i].second, minimum_cutoff, std::ref(mtx));
     }
+    // as of right now, threads don't improve performance
     for (auto &t : threads){
         t.join();
     }
+    delete[] chunks;
     auto end = std::chrono::steady_clock::now();
   
     // Store the time difference between start and end
