@@ -23,9 +23,7 @@
     }
 
 
-int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, int start_index, int end_index, float min_cutoff, std::mutex& mtx){
-    std::cout << "thread running\n";
-    std::lock_guard<std::mutex> lock(mtx);
+int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, float min_cutoff){
     std::vector<float> map = gen_map.interpolated_cm;
     int ret = 0;
     int min_tree_subsample = 5000;
@@ -37,6 +35,8 @@ int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, int start_index, i
     check_tsk_error(ret);
     int n_samples = ts.num_samples;
     double sequence_length = tsk_treeseq_get_sequence_length(&ts);
+    int start_index = 0;
+    int end_index = n_samples;
     std::vector<std::vector<int>> mrca_last = createMRCATable(ts);
     std::vector<std::vector<int>> last_left = createLastLeftTable(ts);
     tsk_id_t mrca;
@@ -175,7 +175,6 @@ int main(int argc, char* argv[]){
     char *ts_file = argv[1];
     char *genetic_map_file = argv[2];
     float minimum_cutoff = std::stof(argv[3]);
-    int n_threads = std::stoi(argv[4]);
     auto start = std::chrono::steady_clock::now();
     tsk_treeseq_t ts;
     int ret = 0;
@@ -185,26 +184,14 @@ int main(int argc, char* argv[]){
     std::cout << "reading rate_map" << std::endl;
     rateMapData gen_map = readRateMap(genetic_map_file);
     std::cout << "rate map loaded" << std::endl;
-    std::pair<int, int> *chunks = generate_subsets(n_threads, n_samples);
-
-    std::mutex mtx;
-    std::vector<std::thread> threads;
-    for (int i = 0; i < n_threads; i++){
-        threads.emplace_back(extract_segments, std::ref(gen_map), std::ref(ts), chunks[i].first, chunks[i].second, minimum_cutoff, std::ref(mtx));
-    }
-    // as of right now, threads don't improve performance
-    for (auto &t : threads){
-        t.join();
-    }
-    delete[] chunks;
     auto end = std::chrono::steady_clock::now();
-  
+    int ret_val = extract_segments(gen_map, ts, minimum_cutoff);
     // Store the time difference between start and end
     auto diff = end - start;
     std::cout << std::chrono::duration<double>(diff).count() << " seconds" << std::endl;
 
     
-    return 0;
+    return ret_val;
 
 
 
