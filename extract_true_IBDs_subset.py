@@ -2,6 +2,7 @@ import numpy as np
 import msprime
 import tskit
 import sys
+import time
 
 start_index = int(sys.argv[1])
 end_index = int(sys.argv[2])
@@ -9,6 +10,7 @@ genetic_map_file = sys.argv[3]
 
 xp = []
 yp = []
+s = time.time()
 f = open(genetic_map_file)
 for line in f:
 	vals = line.split()
@@ -22,16 +24,16 @@ _sites = np.arange(0,max_val+1)
 gen_map =np.interp(_sites,xp,yp)
 	
 
-ts = tskit.load("example_data/sim3.trees")
+ts = tskit.load("example_data/sim.trees")
 f_o = open("subsets_ibd_seg_500k_subset_chr20_" + str(start_index) + "_" + str(end_index) + ".txt",'w+')
 
 id_start = 0
-id_end = 50
+id_end = 399
 
-min_cutoff = 1.0
+min_cutoff = 2.0
 
-subsamples = np.arange(id_start,id_end+1)	
-ts_subset, node_map = ts.simplify(subsamples,map_nodes = True)
+#subsamples = np.arange(id_start,id_end+1)	
+#ts_subset, node_map = ts.simplify(subsamples,map_nodes = True)
 
 #for j in range(ts.num_nodes):
 #	print (j, node_map[j])
@@ -41,7 +43,7 @@ ts_subset, node_map = ts.simplify(subsamples,map_nodes = True)
 #for item in node_map:
 #    print(item)
 
-trees_iter = ts_subset.trees()
+trees_iter = ts.trees()
 tree = next(trees_iter)
 
 mrca_last = [['0' for k in range(id_end+1)] for l in range(id_end+1)]
@@ -120,6 +122,10 @@ for i in range(start_index,end_index):
 			str(genomic_end) + "\t" + str(gen_start)+ "\t" + str(gen_end) +  "\n")
 
 f_o.close()
+
+e = time.time()
+
+print(f"{e - s:.3f} seconds elapsed")
 					
 	
 
