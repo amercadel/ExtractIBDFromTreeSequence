@@ -4,10 +4,6 @@
 #include <chrono>
 #include <sstream>
 #include <fstream>
-#include <thread>
-#include <algorithm>
-#include <functional>
-#include <mutex>
 #include <chrono>
 
 #include "tskit.h"
@@ -23,20 +19,17 @@
     }
 
 
-int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, float min_cutoff){
-    std::vector<float> map = gen_map.interpolated_cm;
+void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_index, size_t end_index, float min_cutoff, bool checkpoint){
+    std::vector<float> &map = gen_map.interpolated_cm;
     int ret = 0;
-    int min_tree_subsample = 5000;
     tsk_tree_t tree;
     check_tsk_error(ret);
     ret = tsk_tree_init(&tree, &ts, 0);
     check_tsk_error(ret);
     ret = tsk_tree_first(&tree);
     check_tsk_error(ret);
-    int n_samples = ts.num_samples;
+    int n_samples = ts.num_samples; // equivalent to id_end
     double sequence_length = tsk_treeseq_get_sequence_length(&ts);
-    int start_index = 0;
-    int end_index = n_samples;
     std::vector<std::vector<int>> mrca_last = createMRCATable(ts);
     std::vector<std::vector<int>> last_left = createLastLeftTable(ts);
     tsk_id_t mrca;
@@ -45,54 +38,51 @@ int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, float min_cutoff){
     char file_name[100];
 
     // Use sprintf to format the string
-    sprintf(file_name, "output_%d_%d.txt", start_index, end_index);
+    sprintf(file_name, "output_%zu_%zu.txt", start_index, end_index);
     output_file.open(file_name, std::ofstream::out);
     if (!output_file.is_open()) {
         std::cerr << "Failed to open output file." << std::endl;
-        return 1;
     }
 
-    
-    for (int i = start_index; i < end_index; i++){
-        for(int j = i + 1; j < n_samples; j++){
+    for(int i = 0; i < n_samples; i++){
+        for(int j = 0; j < n_samples; j++){
             ret = tsk_tree_get_mrca(&tree, i, j, &mrca);
             check_tsk_error(ret);
             mrca_last[i][j] = mrca;
             last_left[i][j] = tree.interval.left;
-            
         }
     }
+    int tree_cnt = 0;
+    int n_trees = tsk_treeseq_get_num_trees(&ts);
+
+    // int min_tree_subsample; will be used later, need to consult with Ardalan
     int left;
-    int genomic_end;
-    int genomic_start;
+    int bp_end;
+    int bp_start;
     float gen_end;
     float gen_start;
     int last_tree_pos = 0;
     for (ret = tsk_tree_first(&tree); ret == TSK_TREE_OK; ret = tsk_tree_next(&tree)){
-        if (tree.interval.left - last_tree_pos < min_tree_subsample){
-            continue;
-        }
+        // if (tree.interval.left - last_tree_pos < min_tree_subsample){
+        //     continue;
+        // }
         last_tree_pos = tree.interval.left;
-        for (size_t i = start_index; i < end_index; i++){
+        for(size_t i = start_index; i < end_index; i++){
             for(size_t j = i + 1; j < n_samples; j++){
                 ret = tsk_tree_get_mrca(&tree, i, j, &mrca);
-                if (mrca_last[i][j] != mrca){
+                if(mrca_last[i][j] != mrca){
                     left = tree.interval.left;
-                    genomic_end = left;
-                    
-                    genomic_start = last_left[i][j];
-                    gen_end = 0;
-                    gen_start = 0;
-                    if (genomic_end > map.size()){
+                    bp_end = left;
+                    bp_start = last_left[i][j];
+                    if (bp_end > map.size()){
                         gen_end = map[map.size() - 1];
                     }else{
-                        gen_end = map[genomic_end];
+                        gen_end = map[bp_end];
                     }
-                    
-                    if (genomic_start > map.size()){
+                    if (bp_start > map.size()){
                         gen_start = map[map.size()];
                     }else{
-                        gen_start = map[genomic_start];
+                        gen_start = map[bp_start];
                     }
                     if (gen_end - gen_start < min_cutoff){
                         last_left[i][j] = left;
@@ -101,49 +91,52 @@ int extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, float min_cutoff){
                     }
                     if (gen_end - gen_start > min_cutoff){
                         float len = gen_end - gen_start;
-                        ibd_segment seg = ibd_segment(i, j, genomic_start, genomic_end, gen_start, gen_end, len);
+                        ibd_segment seg = ibd_segment(i, j, bp_start, bp_end, gen_start, gen_end, len);
                         std::string out = seg.to_string();
                         output_file << out << std::endl;
+                        last_left[i][j] = left;
+                        mrca_last[i][j] = mrca;
                     }
-                    last_left[i][j] = left;
-                    mrca_last[i][j] = mrca;
+
                 }
 
             }
         }
+        tree_cnt++;
+        if (checkpoint & (tree_cnt % 1000 == 0)){
+            std::cout << tree_cnt << " out of " << n_trees << " visited" << std::endl;
+        }
     }
-    
     for (size_t i = start_index; i < end_index; i++){
         for (size_t j = i + 1; j < n_samples; j++){
-            genomic_start = last_left[i][j];
+            bp_start = last_left[i][j];
             
-            genomic_end = static_cast<int>(sequence_length);
+            bp_end = static_cast<int>(sequence_length);
             gen_end = 0;
             gen_start = 0;
-            if (genomic_end > map.size()){
+            if (bp_end > map.size()){
                 gen_end = map[map.size() - 1];
             }else{
-                gen_end = map[genomic_end];   
+                gen_end = map[bp_end];   
             }
-            if(genomic_start > map.size()){
+            if(bp_start > map.size()){
                 gen_start = map[map.size() - 1];
 
             }else{
-                gen_start = map[genomic_start];
+                gen_start = map[bp_start];
             }
             
             if (gen_end - gen_start > min_cutoff){
                 float len = gen_end - gen_start;
-                ibd_segment seg = ibd_segment(i, j, genomic_start, genomic_end, gen_start, gen_end, len);
+                ibd_segment seg = ibd_segment(i, j, bp_start, bp_end, gen_start, gen_end, len);
                 std::string out = seg.to_string();
                 output_file << out << std::endl;
             }
-                
-
-            }
-        }   
+        }
+    }   
     output_file.close();
-    return 0;
+
+
 }
 
 std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
@@ -170,29 +163,31 @@ std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
 
 }
 
-
 int main(int argc, char* argv[]){
     char *ts_file = argv[1];
-    char *genetic_map_file = argv[2];
-    float minimum_cutoff = std::stof(argv[3]);
+    size_t start_index = std::stoul(argv[2]);
+    int end_index = std::stoul(argv[3]);
+    char *genetic_map_file = argv[4];
+    float minimum_cutoff = std::stof(argv[5]);
     auto start = std::chrono::steady_clock::now();
+    std::cout << "reading rate_map" << std::endl;
+    rateMapData gen_map = readRateMap(genetic_map_file);
+    std::cout << "rate map loaded" << std::endl;
+    
+    
     tsk_treeseq_t ts;
     int ret = 0;
     ret = tsk_treeseq_load(&ts, ts_file, 0);
     check_tsk_error(ret);
-    int n_samples = ts.num_samples;
-    std::cout << "reading rate_map" << std::endl;
-    rateMapData gen_map = readRateMap(genetic_map_file);
-    std::cout << "rate map loaded" << std::endl;
+
+    extract_segments(gen_map, ts, start_index, end_index, minimum_cutoff, true);
     auto end = std::chrono::steady_clock::now();
-    int ret_val = extract_segments(gen_map, ts, minimum_cutoff);
     // Store the time difference between start and end
     auto diff = end - start;
     std::cout << std::chrono::duration<double>(diff).count() << " seconds" << std::endl;
 
+    return 0;
     
-    return ret_val;
-
 
 
 

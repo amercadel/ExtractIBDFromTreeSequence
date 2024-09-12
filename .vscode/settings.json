@@ -70,6 +70,9 @@
         "clocale": "cpp",
         "source_location": "cpp",
         "thread": "cpp",
-        "variant": "cpp"
+        "variant": "cpp",
+        "forward_list": "cpp",
+        "typeindex": "cpp",
+        "unordered_set": "cpp"
     }
 }

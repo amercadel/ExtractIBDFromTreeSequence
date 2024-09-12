@@ -18,7 +18,7 @@ std::vector<std::string> splitOnTab(std::string& line){
 }
 
 
-std::vector<float> rateMapData::interpolateVector(std::vector<int>& sites, std::vector<int>& bp, std::vector<float>& cm) {
+std::vector<float> rateMapData::interpolateVector(std::vector<int> &sites, std::vector<int> &bp, std::vector<float> &cm) {
     std::vector<float> interpolated_cm;
     int n = sites.size();
     int m = bp.size();
