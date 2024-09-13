@@ -106,6 +106,7 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
         if (checkpoint & (tree_cnt % 1000 == 0)){
             std::cout << tree_cnt << " out of " << n_trees << " visited" << std::endl;
         }
+
     }
     for (size_t i = start_index; i < end_index; i++){
         for (size_t j = i + 1; j < n_samples; j++){
@@ -136,7 +137,7 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
     }   
     output_file.close();
 
-
+    tsk_tree_free(&tree);
 }
 
 std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
@@ -187,15 +188,6 @@ int main(int argc, char* argv[]){
     std::cout << std::chrono::duration<double>(diff).count() << " seconds" << std::endl;
 
     return 0;
-    
-
-
-
-
-    
-    
-
-
 
 }
 
