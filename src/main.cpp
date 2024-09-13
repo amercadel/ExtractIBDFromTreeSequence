@@ -56,12 +56,8 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
     int n_trees = tsk_treeseq_get_num_trees(&ts);
 
     // int min_tree_subsample; will be used later, need to consult with Ardalan
-    int left;
-    int bp_end;
-    int bp_start;
-    float gen_end;
-    float gen_start;
-    int last_tree_pos = 0;
+    int left, bp_end, bp_start, last_tree_pos;
+    float gen_end, gen_start;
     for (ret = tsk_tree_first(&tree); ret == TSK_TREE_OK; ret = tsk_tree_next(&tree)){
         // if (tree.interval.left - last_tree_pos < min_tree_subsample){
         //     continue;
@@ -140,29 +136,28 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
     tsk_tree_free(&tree);
 }
 
-std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
-    std::pair<int, int>* arr =  new std::pair<int, int>[n_cpus];
+// std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
+//     std::pair<int, int>* arr =  new std::pair<int, int>[n_cpus];
     
-    if (n_haplotypes % n_cpus == 0){
-        int haps_per_cpu = n_haplotypes / (n_cpus);
-        for (int i = 0; i < n_cpus; i++){
-            std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
-            arr[i] = p;
-        }
-    }
-    else{
-        int haps_per_cpu = n_haplotypes / (n_cpus - 1);
-        for (int i = 0; i < n_cpus - 1; i++){
-            std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
-            arr[i] = p;
-        }
-        std::pair<int, int> p((n_cpus - 1) * haps_per_cpu, std::min((n_cpus - 1) * haps_per_cpu, n_haplotypes));
-        arr[n_cpus - 1] = p;
-        }
+//     if (n_haplotypes % n_cpus == 0){
+//         int haps_per_cpu = n_haplotypes / (n_cpus);
+//         for (int i = 0; i < n_cpus; i++){
+//             std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
+//             arr[i] = p;
+//         }
+//     }
+//     else{
+//         int haps_per_cpu = n_haplotypes / (n_cpus - 1);
+//         for (int i = 0; i < n_cpus - 1; i++){
+//             std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
+//             arr[i] = p;
+//         }
+//         std::pair<int, int> p((n_cpus - 1) * haps_per_cpu, std::min((n_cpus - 1) * haps_per_cpu, n_haplotypes));
+//         arr[n_cpus - 1] = p;
+//         }
 
-    return arr;
-
-}
+//     return arr;
+// }
 
 int main(int argc, char* argv[]){
     char *ts_file = argv[1];

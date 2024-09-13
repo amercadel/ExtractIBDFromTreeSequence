@@ -1,8 +1,16 @@
 // https://github.com/tskit-dev/tskit/blob/f27700635da6a5e20b885810f0f21a2f2203dcce/python/tests/__init__.py#L321
+// implementation of schieber vishkin algorithm for finding the mrca of two nodes in a tree
 #include <vector>
 #include <iostream> // For std::cerr
 #include <cstdlib>
 #include "tskit.h"
+
+
+#define check_tsk_error(val)                                                            \
+    if (val < 0) {                                                                      \
+        fprintf(stderr, "line %d: %s", __LINE__, tsk_strerror(val));                    \
+        exit(EXIT_FAILURE);                                                             \
+    }
 
 
 // oriented forest: each tree will have its own oriented forest, which should be an iterable (vector in this case)
