@@ -18,8 +18,19 @@
         exit(EXIT_FAILURE);                                                             \
     }
 
+std::vector<std::vector<int>> createMRCATable(const tsk_treeseq_t &ts){
+    int n_samples = ts.num_samples;
+    std::vector<std::vector<int>> mrca(n_samples, std::vector(n_samples, 0));
+    return mrca;
+}
+std::vector<std::vector<int>> createLastLeftTable(const tsk_treeseq_t &ts){
+    int n_samples = ts.num_samples;
+    std::vector<std::vector<int>> last_left(n_samples, std::vector(n_samples, 0));
+    return last_left;
+};
 
-void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_index, size_t end_index, float min_cutoff, bool checkpoint){
+
+void extract_segments(rateMapData &gen_map, const tsk_treeseq_t &ts, size_t start_index, size_t end_index, float min_cutoff, bool checkpoint){
     std::vector<float> &map = gen_map.interpolated_cm;
     int ret = 0;
     tsk_tree_t tree;
@@ -34,11 +45,8 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
     std::vector<std::vector<int>> last_left = createLastLeftTable(ts);
     tsk_id_t mrca;
     std::ofstream output_file;
-    // Define a char array with sufficient size
     char file_name[100];
-
-    // Use sprintf to format the string
-    sprintf(file_name, "output_%zu_%zu.txt", start_index, end_index);
+    snprintf(file_name, sizeof(file_name), "output_%zu_%zu.txt", start_index, end_index);
     output_file.open(file_name, std::ofstream::out);
     if (!output_file.is_open()) {
         std::cerr << "Failed to open output file." << std::endl;
@@ -55,13 +63,17 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
     int tree_cnt = 0;
     int n_trees = tsk_treeseq_get_num_trees(&ts);
 
-    // int min_tree_subsample; will be used later, need to consult with Ardalan
+    int min_tree_subsample = 500;
     int left, bp_end, bp_start, last_tree_pos;
     float gen_end, gen_start;
     for (ret = tsk_tree_first(&tree); ret == TSK_TREE_OK; ret = tsk_tree_next(&tree)){
-        // if (tree.interval.left - last_tree_pos < min_tree_subsample){
-        //     continue;
-        // }
+        if (tree.interval.left - last_tree_pos < min_tree_subsample){
+            tree_cnt++;
+            if (checkpoint & (tree_cnt % 10000 == 0)){
+            std::cout << tree_cnt << " out of " << n_trees << " visited" << std::endl;
+            }
+            continue;
+        }
         last_tree_pos = tree.interval.left;
         for(size_t i = start_index; i < end_index; i++){
             for(size_t j = i + 1; j < n_samples; j++){
@@ -99,7 +111,7 @@ void extract_segments(rateMapData &gen_map, tsk_treeseq_t &ts, size_t start_inde
             }
         }
         tree_cnt++;
-        if (checkpoint & (tree_cnt % 1000 == 0)){
+        if (checkpoint & (tree_cnt % 10000 == 0)){
             std::cout << tree_cnt << " out of " << n_trees << " visited" << std::endl;
         }
 
@@ -169,19 +181,16 @@ int main(int argc, char* argv[]){
     std::cout << "reading rate_map" << std::endl;
     rateMapData gen_map = readRateMap(genetic_map_file);
     std::cout << "rate map loaded" << std::endl;
-    
-    
     tsk_treeseq_t ts;
     int ret = 0;
     ret = tsk_treeseq_load(&ts, ts_file, 0);
     check_tsk_error(ret);
-
     extract_segments(gen_map, ts, start_index, end_index, minimum_cutoff, true);
+    tsk_treeseq_free(&ts);
     auto end = std::chrono::steady_clock::now();
     // Store the time difference between start and end
     auto diff = end - start;
     std::cout << std::chrono::duration<double>(diff).count() << " seconds" << std::endl;
-
     return 0;
 
 }

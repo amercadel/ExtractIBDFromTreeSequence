@@ -29,5 +29,5 @@ struct ibd_segment{
 
 };
 
-std::vector<std::vector<int>> createMRCATable(tsk_treeseq_t &ts);
-std::vector<std::vector<int>> createLastLeftTable(tsk_treeseq_t &ts);
+std::vector<std::vector<int>> createMRCATable(const tsk_treeseq_t &ts);
+std::vector<std::vector<int>> createLastLeftTable(const tsk_treeseq_t &ts);

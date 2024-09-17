@@ -7,7 +7,7 @@
 
 
 
-std::vector<std::string> splitOnTab(std::string& line){
+std::vector<std::string> splitOnTab(const std::string& line){
     std::vector<std::string> tokens;
     std::istringstream iss(line);
     std::string token;
@@ -65,8 +65,16 @@ rateMapData readRateMap(char* filename){
         cm_vec.push_back(cm);
 
     }
+    int min_tree_subsample = INT_MAX;
+    for (int a = 1; a < bp_vec.size() - 1; a++){
+        int sub_samp = bp_vec[a] - bp_vec[a - 1];
+        if(sub_samp < min_tree_subsample){
+            min_tree_subsample = sub_samp;
+        }
+    }
     res.bp_vec = bp_vec;
     res.cm_vec = cm_vec;
+    res.min_tree_subsample = min_tree_subsample;
     res.last_bp = bp_vec[bp_vec.size() - 1];
     res.last_cm = cm_vec[cm_vec.size() - 1];
     for (int i = 0; i <= res.last_bp + 1; i ++){
@@ -74,5 +82,5 @@ rateMapData readRateMap(char* filename){
     }
     res.interpolated_cm = res.interpolateVector(res.all_sites, res.bp_vec, res.cm_vec);
     return res;
-
 }
+

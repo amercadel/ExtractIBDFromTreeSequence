@@ -5,7 +5,7 @@
 #include <cmath>
 
 
-std::vector<std::string> splitOnTab(std::string& line);
+std::vector<std::string> splitOnTab(const std::string& line);
 struct rateMapData{
     std::vector<int> bp_vec;
     std::vector<float> cm_vec;
@@ -14,6 +14,7 @@ struct rateMapData{
     std::vector<float> interpolateVector(std::vector<int> &sites, std::vector<int> &bp_vec, std::vector<float> &cm_vec);
     int last_bp;
     float last_cm;
+    int min_tree_subsample;
 
     void display(int idx){
         std::cout << "bp value: " << bp_vec[idx] << std::endl << "cm value: " << cm_vec[idx] << std::endl;

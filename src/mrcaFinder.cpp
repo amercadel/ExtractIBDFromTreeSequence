@@ -2,7 +2,6 @@
 // implementation of schieber vishkin algorithm for finding the mrca of two nodes in a tree
 #include <vector>
 #include <iostream> // For std::cerr
-#include <cstdlib>
 #include "tskit.h"
 
 
