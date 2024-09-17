@@ -16,11 +16,13 @@ lib_sources = [
     'tskit/c/tskit/genotypes.c', 'tskit/c/tskit/stats.c', 'tskit/c/tskit/convert.c', 'tskit/c/tskit/haplotype_matching.c'
 ]
 
+omp = dependency('openmp')
+
 
 
 tskit_lib = static_library('tskit',
     sources: lib_sources, dependencies: lib_deps)
 tskit_dep = declare_dependency(include_directories:tskit_inc, link_with: tskit_lib)
 executable('extractIBD', 'src/main.cpp', 'src/read_rate_map.cpp',
-            dependencies: [tskit_dep])
+            dependencies: [tskit_dep, omp])
 
