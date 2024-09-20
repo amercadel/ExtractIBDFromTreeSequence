@@ -169,7 +169,6 @@ int main(int argc, char* argv[]){
     for (auto& th : threads) th.join();
     tsk_treeseq_free(&ts);
     auto end = std::chrono::steady_clock::now();
-    // Store the time difference between start and end
     auto diff = end - start;
     std::cout << std::chrono::duration<double>(diff).count() << " seconds" << std::endl;
     return 0;

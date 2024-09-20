@@ -6,6 +6,7 @@
 #include <fstream>
 #include <chrono>
 
+#include "omp.h"
 #include "tskit.h"
 #include "read_rate_map.hpp"
 #include "extract_ibd_segments.hpp"
@@ -51,7 +52,7 @@ void extract_segments(rateMapData &gen_map, const tsk_treeseq_t &ts, size_t star
     if (!output_file.is_open()) {
         std::cerr << "Failed to open output file." << std::endl;
     }
-
+    
     for(int i = 0; i < n_samples; i++){
         for(int j = 0; j < n_samples; j++){
             ret = tsk_tree_get_mrca(&tree, i, j, &mrca);
@@ -63,9 +64,10 @@ void extract_segments(rateMapData &gen_map, const tsk_treeseq_t &ts, size_t star
     int tree_cnt = 0;
     int n_trees = tsk_treeseq_get_num_trees(&ts);
 
-    int min_tree_subsample = 500;
+    int min_tree_subsample = 5000;
     int left, bp_end, bp_start, last_tree_pos;
     float gen_end, gen_start;
+    
     for (ret = tsk_tree_first(&tree); ret == TSK_TREE_OK; ret = tsk_tree_next(&tree)){
         if (tree.interval.left - last_tree_pos < min_tree_subsample){
             tree_cnt++;
@@ -75,6 +77,7 @@ void extract_segments(rateMapData &gen_map, const tsk_treeseq_t &ts, size_t star
             continue;
         }
         last_tree_pos = tree.interval.left;
+        
         for(size_t i = start_index; i < end_index; i++){
             for(size_t j = i + 1; j < n_samples; j++){
                 ret = tsk_tree_get_mrca(&tree, i, j, &mrca);
@@ -148,32 +151,9 @@ void extract_segments(rateMapData &gen_map, const tsk_treeseq_t &ts, size_t star
     tsk_tree_free(&tree);
 }
 
-// std::pair<int, int> *generate_subsets(int n_cpus, int n_haplotypes){
-//     std::pair<int, int>* arr =  new std::pair<int, int>[n_cpus];
-    
-//     if (n_haplotypes % n_cpus == 0){
-//         int haps_per_cpu = n_haplotypes / (n_cpus);
-//         for (int i = 0; i < n_cpus; i++){
-//             std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
-//             arr[i] = p;
-//         }
-//     }
-//     else{
-//         int haps_per_cpu = n_haplotypes / (n_cpus - 1);
-//         for (int i = 0; i < n_cpus - 1; i++){
-//             std::pair<int, int> p(i * haps_per_cpu, (i + 1) * haps_per_cpu);
-//             arr[i] = p;
-//         }
-//         std::pair<int, int> p((n_cpus - 1) * haps_per_cpu, std::min((n_cpus - 1) * haps_per_cpu, n_haplotypes));
-//         arr[n_cpus - 1] = p;
-//         }
-
-//     return arr;
-// }
-
 int main(int argc, char* argv[]){
     char *ts_file = argv[1];
-    size_t start_index = std::stoul(argv[2]);
+    int start_index = std::stoul(argv[2]);
     int end_index = std::stoul(argv[3]);
     char *genetic_map_file = argv[4];
     float minimum_cutoff = std::stof(argv[5]);
@@ -185,7 +165,11 @@ int main(int argc, char* argv[]){
     int ret = 0;
     ret = tsk_treeseq_load(&ts, ts_file, 0);
     check_tsk_error(ret);
-    extract_segments(gen_map, ts, start_index, end_index, minimum_cutoff, true);
+    std::cout << omp_get_thread_num() << " " << omp_get_thread_limit << std::endl;
+    #pragma omp parallel for
+        for(int i = 0; i < 2; i++){
+            extract_segments(gen_map, ts, (i * 150), ((i + 1) * 150), minimum_cutoff, true);
+        }
     tsk_treeseq_free(&ts);
     auto end = std::chrono::steady_clock::now();
     // Store the time difference between start and end
